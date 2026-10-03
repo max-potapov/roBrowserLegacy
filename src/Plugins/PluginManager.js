@@ -91,7 +91,7 @@ Plugins.init = function init(context) {
 			.then(module => {
 				const plugin = module.default || module;
 				if (typeof plugin === 'function') {
-					if (plugin(params[i])) {
+					if (plugin(params[i], context)) {
 						console.log('[PluginManager] Initialized plugin: ' + pluginPath);
 					} else {
 						console.error('[PluginManager] Failed to intialize plugin: ' + pluginPath);
