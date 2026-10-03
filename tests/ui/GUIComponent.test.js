@@ -5,7 +5,7 @@
  * replaces it with a stub, so the two behaviours below are held by nothing
  * else in the suite.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	cursor: {
@@ -36,6 +36,7 @@ vi.mock('UI/Scrollbar.js', () => ({ default: {} }));
 const GUIComponent = (await import('UI/GUIComponent.js')).default;
 
 let seq = 0;
+const mounted = new Set();
 
 /**
  * A component carrying the markup a case needs, appended the way UIManager
@@ -49,8 +50,15 @@ function mount(html) {
 	const component = new GUIComponent(`TestComponent${++seq}`, '');
 	component.render = () => html;
 	component.append();
+	mounted.add(component);
 	return component;
 }
+
+// Deferred scrollbar callbacks must see detached hosts before jsdom teardown.
+afterEach(() => {
+	mounted.forEach(component => component.remove());
+	mounted.clear();
+});
 
 beforeEach(() => {
 	document.body.innerHTML = '';
@@ -96,9 +104,7 @@ describe('the cursor over a styled checkbox', () => {
 		const component = mount('<div class="checkbox"></div>');
 		await new Promise(resolve => setTimeout(resolve, 0));
 
-		component._container
-			.querySelector('.checkbox')
-			.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+		component._container.querySelector('.checkbox').dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 
 		expect(mocks.cursor.setType).toHaveBeenCalledWith(mocks.cursor.ACTION.CLICK);
 	});
