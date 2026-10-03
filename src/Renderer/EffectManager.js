@@ -346,7 +346,7 @@ class EffectManager {
 	 * @param {object} effect parameter object
 	 */
 	static add(effect, Params) {
-		const name = effect.constructor.name || effect.constructor._uid || (effect.constructor._uid = _uniqueId++);
+		const name = effect.constructor._uid || effect.constructor.name || (effect.constructor._uid = _uniqueId++);
 
 		if (!(name in _list)) {
 			_list[name] = [];
@@ -1240,10 +1240,11 @@ class EffectManager {
 	 * @param {mixed} effect owner ID
 	 */
 	static remove(effect, AID, effectID) {
-		if (!effect || !(effect.name in _list)) {
+		const name = effect && (effect._uid || effect.name);
+		if (!effect || !(name in _list)) {
 			Object.keys(_list).forEach(key => clean(key, AID, effectID));
 		} else {
-			clean(effect.name, AID, effectID);
+			clean(name, AID, effectID);
 		}
 
 		// Remove entity effects
@@ -1271,12 +1272,13 @@ class EffectManager {
 	 * @param {mixed} effect ID
 	 */
 	static endRepeat(effect, AID, effectID) {
-		if (!effect || !(effect.name in _list)) {
+		const name = effect && (effect._uid || effect.name);
+		if (!effect || !(name in _list)) {
 			Object.keys(_list).forEach(key => cleanRepeat(key, AID, effectID));
 			return;
 		}
 
-		cleanRepeat(effect.name, AID, effectID);
+		cleanRepeat(name, AID, effectID);
 	}
 }
 
