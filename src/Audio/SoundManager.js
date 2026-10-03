@@ -112,13 +112,16 @@ class SoundManager {
 	 */
 	static volume = Preferences.Sound.volume;
 
+	/** Optional plugin hook: (AudioContext, RO position) -> { node, dispose }. */
+	static spatializer = null;
+
 	/**
 	 * Play a wav sound
 	 *
 	 * @param {string} filename
 	 * @param {optional|number} vol (volume)
 	 */
-	static play(filename, vol) {
+	static play(filename, vol, position = null) {
 		// Some callers pass a position instead of a volume
 		if (typeof vol !== 'number' || !isFinite(vol) || vol <= 0) {
 			vol = 1;
@@ -161,10 +164,13 @@ class SoundManager {
 			source.buffer = buffer;
 			gain.gain.value = Math.min(volume, 1.0);
 			source.connect(gain);
-			gain.connect(context.destination);
+			const spatial = position && SoundManager.spatializer ? SoundManager.spatializer(context, position) : null;
+			gain.connect(spatial?.node || context.destination);
+			spatial?.node.connect(context.destination);
 
-			const instance = { source, gain, vol };
+			const instance = { source, gain, vol, spatial };
 			source.onended = () => {
+				spatial?.dispose();
 				gain.disconnect();
 				const current = _sounds[filename];
 				if (current) {
@@ -190,7 +196,7 @@ class SoundManager {
 	static playPosition(filename, srcPosition) {
 		const dist = Math.floor(glMatrix.vec2.dist(srcPosition, Session.Entity.position));
 		const vol = Math.max(1 - Math.abs(((dist - 1) * (1 - 0.01)) / (25 - 1) + 0.01), 0.1);
-		SoundManager.play(filename, vol);
+		SoundManager.play(filename, vol, srcPosition);
 	}
 
 	/**
@@ -255,6 +261,7 @@ function stopInstances(instances) {
 		} catch {
 			// already stopped
 		}
+		instance.spatial?.dispose();
 		instance.gain.disconnect();
 	}
 }
